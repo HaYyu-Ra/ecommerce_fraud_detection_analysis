@@ -26,6 +26,7 @@ env/
 venv/
 *.env
 *.venv/
+new_venv/  # Ignore the new_venv directory
 
 # Ignore generated reports and large outputs
 /reports/*
@@ -39,10 +40,8 @@ venv/
 *.zip
 *.tar.gz
 *.rar
+
 # Ignore Jupyter, Lab, and Stat directories
 jupyter/
 lab/
 stat/
-*.new_venv/
-*./new_venv/
-
