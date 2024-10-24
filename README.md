@@ -1,18 +1,18 @@
-Fraud Detection Project
-Overview
+# Fraud Detection Project
+# Overview
 This project focuses on analyzing and detecting fraudulent transactions in e-commerce and credit card data. The key steps involve data preprocessing, exploratory data analysis (EDA), and developing machine learning models to identify fraud. The objective is to improve transaction security by reducing fraudulent activity through accurate detection models.
 
-Key Features
+# Key Features
 Data Preprocessing: Techniques to clean and prepare data, ensuring reliability and accuracy.
 Exploratory Data Analysis (EDA): Insights into patterns, fraud indicators, and data distributions.
 Machine Learning Models: Use of algorithms like logistic regression, decision trees, and ensemble methods to classify transactions as fraudulent or legitimate.
 Evaluation Metrics: Performance is evaluated using precision, recall, and F1-score, critical for real-world fraud detection.
 Deployment Ready: Integration of tools for real-time fraud detection in production environments.
-Datasets Used
+# Datasets Used
 Fraud_Data.csv: E-commerce transactions with features such as user_id, signup_time, purchase_time, purchase_value, device_id, and the target variable class (1 for fraudulent, 0 for non-fraudulent).
 IpAddress_to_Country.csv: Maps IP address ranges to countries, adding geographical information to transaction data.
 CreditCard.csv: Credit card transaction data with anonymized features (V1 to V28) and the target variable Class (1 for fraudulent, 0 for non-fraudulent).
-Key Steps Taken
+# Key Steps Taken
 1. Data Analysis and Preprocessing
 Handling Missing Values: Imputation and dropping features with over 30% missing values.
 Data Cleaning: Removal of duplicates, correction of data types, and ensuring the integrity of date/time fields.
@@ -33,11 +33,11 @@ Normalization and Scaling: Applied to features for equitable model training.
 6. Model Building and Training
 Train-Test Split: Utilized train_test_split to create training and test datasets for both fraud and credit card data.
 Models Tested: Algorithms such as logistic regression, decision trees, random forest, gradient boosting, multi-layer perceptron (MLP), and recurrent neural networks (RNN) were used.
-Interim 2 Submission: Model Building and Training
-Overview
+# Interim 2 Submission: Model Building and Training
+# Overview
 This report documents the process of building and training machine learning models to improve fraud detection accuracy. The goal is to reduce financial losses and improve customer trust for Adey Innovations Inc. through the deployment of robust fraud detection systems.
 
-Data Preparation
+# Data Preparation
 Feature and Target Separation: Features and target variables were separated for each dataset.
 Train-Test Split: Both e-commerce and credit card datasets were split into training and testing sets.
 Model Selection and Training
@@ -51,10 +51,10 @@ For Credit Card Data
 Top Performers: Random forest, logistic regression, and gradient boosting had the highest accuracy and F1-scores, indicating strong predictive power.
 For Fraud Data
 Top Performers: Random forest and gradient boosting stood out with the highest performance metrics, particularly in handling class imbalance.
-Conclusion
+# Conclusion
 The models developed and evaluated for fraud detection in both e-commerce and credit card transactions have shown promising results. Random forest and gradient boosting models performed best, offering significant potential for real-time fraud detection. Ongoing optimization and feature enhancement are recommended to further refine these models.
 
-Installation
+# Installation
 To get started, follow these steps:
 
 bash
