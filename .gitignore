@@ -45,3 +45,4 @@ new_venv/  # Ignore the new_venv directory
 jupyter/
 lab/
 stat/
+*.new_venv/
