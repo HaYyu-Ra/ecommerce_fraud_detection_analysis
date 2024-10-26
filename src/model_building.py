@@ -1,188 +1,185 @@
+# Import statements
 import pandas as pd
-import mlflow
-import mlflow.sklearn
-import mlflow.tensorflow
+import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.metrics import classification_report, accuracy_score
-from tensorflow import keras
-from tensorflow.keras import layers
-import numpy as np
-from typing import Tuple, Dict, Any
+from sklearn.metrics import classification_report, roc_auc_score
+from sklearn.pipeline import make_pipeline
+from sklearn.impute import SimpleImputer
+import tensorflow as tf
+import mlflow
+import mlflow.sklearn
+import mlflow.tensorflow
+import os
+import logging
 
-# Load your data
-def load_data(file_paths: Tuple[str, str]) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    fraud_data = pd.read_csv(file_paths[0])
-    credit_data = pd.read_csv(file_paths[1])
-    return fraud_data, credit_data
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Preprocess data by converting non-numeric types and handling missing values
-def preprocess_data(data: pd.DataFrame) -> pd.DataFrame:
-    # Convert date columns to numeric (timestamp)
-    for col in data.select_dtypes(include=['object']):
+# Dataset paths
+credit_card_file_path = r'C:\Users\hayyu.ragea\AppData\Local\Programs\Python\Python312\ecommerce_fraud_detection_system\Data\processed\creditcard_cleaned.csv'
+fraud_data_file_path = r'C:\Users\hayyu.ragea\AppData\Local\Programs\Python\Python312\ecommerce_fraud_detection_system\Data\processed\merged_data.csv'
+
+# Load datasets with error handling
+def load_datasets():
+    try:
+        fraud_data = pd.read_csv(fraud_data_file_path)
+        creditcard_data = pd.read_csv(credit_card_file_path)
+        logging.info("Datasets loaded successfully.")
+        return fraud_data, creditcard_data
+    except FileNotFoundError as e:
+        logging.error(f"Error loading dataset: {e}")
+        raise
+
+fraud_data, creditcard_data = load_datasets()
+
+# Data Preparation: Feature and Target Separation
+def prepare_data(fraud_data, creditcard_data):
+    X_fraud = fraud_data.drop('class', axis=1)
+    y_fraud = fraud_data['class']
+    X_credit = creditcard_data.drop('Class', axis=1)
+    y_credit = creditcard_data['Class']
+    return X_fraud, y_fraud, X_credit, y_credit
+
+X_fraud, y_fraud, X_credit, y_credit = prepare_data(fraud_data, creditcard_data)
+
+# Preprocessing Function
+def preprocess_data(X):
+    # Convert datetime columns to int64 and drop any columns that cannot be converted
+    for col in X.select_dtypes(include=['object']):
         try:
-            data[col] = pd.to_datetime(data[col]).astype(int) // 10**9  # Convert to UNIX timestamp
-        except (ValueError, TypeError):
-            data.drop(columns=[col], inplace=True)  # Drop non-convertible columns
+            X[col] = pd.to_datetime(X[col], format='%Y-%m-%d', errors='coerce').astype(np.int64) // 10**9
+        except ValueError:
+            X.drop(col, axis=1, inplace=True)
+    
+    # Drop columns that are entirely NaN
+    X.dropna(axis=1, how='all', inplace=True)
 
-    # Handle missing values (if any)
-    data.fillna(0, inplace=True)  # Or use other imputation methods
+    # Drop columns with a high percentage of missing values
+    threshold = 0.5
+    X = X.loc[:, X.isnull().mean() < threshold]
 
-    return data
+    # Impute missing values
+    imputer = SimpleImputer(strategy='mean')
+    X_imputed = imputer.fit_transform(X)
+    
+    logging.info("Data preprocessing completed.")
+    return pd.DataFrame(X_imputed, columns=X.columns)
 
-# Prepare data for modeling
-def prepare_data(data: pd.DataFrame, target_column: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    data = preprocess_data(data)  # Preprocess the data here
-    X = data.drop(columns=[target_column])
-    y = data[target_column]
+X_fraud = preprocess_data(X_fraud)
+X_credit = preprocess_data(X_credit)
+
+# Train-Test Split
+def split_data(X, y):
     return train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Evaluate a model
-def evaluate_model(model: Any, X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series, y_test: pd.Series, model_name: str) -> None:
-    with mlflow.start_run():
-        # Train the model
+X_train_fraud, X_test_fraud, y_train_fraud, y_test_fraud = split_data(X_fraud, y_fraud)
+X_train_credit, X_test_credit, y_train_credit, y_test_credit = split_data(X_credit, y_credit)
+
+# Standard Scaling
+def scale_data(X_train, X_test):
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    return X_train_scaled, X_test_scaled
+
+X_train_fraud_scaled, X_test_fraud_scaled = scale_data(X_train_fraud, X_test_fraud)
+X_train_credit_scaled, X_test_credit_scaled = scale_data(X_train_credit, X_test_credit)
+
+# Model Selection: Initialize models
+models = {
+    "Logistic Regression": LogisticRegression(max_iter=1000),
+    "Decision Tree": DecisionTreeClassifier(),
+    "Random Forest": RandomForestClassifier(),
+    "Gradient Boosting": GradientBoostingClassifier(),
+    "MLP": MLPClassifier(max_iter=500),
+}
+
+# Initialize MLflow for Experiment Tracking
+mlflow.set_experiment("Fraud Detection Experiment")
+
+# Model Training and Evaluation Function
+def train_and_evaluate_model(model_name, model, X_train, y_train, X_test, y_test, X_test_original):
+    with mlflow.start_run(run_name=model_name):
         model.fit(X_train, y_train)
-        predictions = model.predict(X_test)
-
-        # Convert probabilities to binary if necessary
-        if predictions.ndim == 2 and predictions.shape[1] == 1:
-            predictions = (predictions > 0.5).astype(int)
-        elif predictions.ndim == 1 and not np.issubdtype(predictions.dtype, np.integer):
-            predictions = (predictions > 0.5).astype(int)
+        y_pred = model.predict(X_test)
+        y_proba = model.predict_proba(X_test)[:, 1] if hasattr(model, "predict_proba") else model.decision_function(X_test)
         
-        # Evaluate the model
-        accuracy = accuracy_score(y_test, predictions)
-        report = classification_report(y_test, predictions)
-
-        # Log parameters, metrics, and model
-        mlflow.log_param("model_name", model_name)
-        mlflow.log_param("num_features", X_train.shape[1])  # Number of features
-        mlflow.log_metric("accuracy", accuracy)
+        report = classification_report(y_test, y_pred)
+        auc = roc_auc_score(y_test, y_proba)
+        
+        mlflow.log_param("model", model_name)
+        mlflow.log_metric("roc_auc", auc)
         mlflow.log_text(report, "classification_report.txt")
         
-        # Log models depending on type
-        if isinstance(model, keras.Model):
-            mlflow.tensorflow.log_model(model, model_name)
-        else:
-            mlflow.sklearn.log_model(model, model_name)
-
-        print(f"Model: {model_name}")
-        print(f"Accuracy: {accuracy}")
-        print(report)
-
-# Build CNN model
-def build_cnn_model(input_shape: Tuple[int, int, int]) -> keras.Model:
-    model = keras.Sequential([
-        layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Flatten(),
-        layers.Dense(128, activation='relu'),
-        layers.Dense(1, activation='sigmoid')
-    ])
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    return model
-
-# Build RNN model
-def build_rnn_model(input_shape: Tuple[int, int]) -> keras.Model:
-    model = keras.Sequential([
-        layers.SimpleRNN(50, input_shape=input_shape, return_sequences=True),
-        layers.SimpleRNN(50),
-        layers.Dense(1, activation='sigmoid')
-    ])
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    return model
-
-# Build LSTM model
-def build_lstm_model(input_shape: Tuple[int, int]) -> keras.Model:
-    model = keras.Sequential([
-        layers.LSTM(50, input_shape=input_shape, return_sequences=True),
-        layers.LSTM(50),
-        layers.Dense(1, activation='sigmoid')
-    ])
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    return model
-
-# Automatically adjust reshaping
-def auto_reshape(X: pd.DataFrame, model_type: str) -> Tuple:
-    num_samples, num_features = X.shape
-    
-    if model_type == 'cnn':
-        side_length = int(num_features ** 0.5)
-        if side_length ** 2 != num_features:
-            raise ValueError(f"Cannot reshape array of size {X.size} into a square for CNN.")
-        return X.values.reshape(num_samples, side_length, side_length, 1)
-    
-    elif model_type in ['rnn', 'lstm']:
-        return X.values.reshape(num_samples, num_features, 1)
-    
-    else:
-        raise ValueError(f"Unsupported model type for reshaping: {model_type}")
-
-# Evaluate models
-def evaluate_models(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series, y_test: pd.Series) -> None:
-    models: Dict[str, Any] = {
-        "Logistic Regression": LogisticRegression(max_iter=1000),
-        "Decision Tree": DecisionTreeClassifier(),
-        "Random Forest": RandomForestClassifier(),
-        "Gradient Boosting": GradientBoostingClassifier(),
-        "MLP Classifier": MLPClassifier(max_iter=1000),
-    }
-
-    # Evaluate classical machine learning models
-    for model_name, model in models.items():
-        evaluate_model(model, X_train, X_test, y_train, y_test, model_name)
-
-    # Reshape data for CNN, RNN, LSTM
-    try:
-        X_train_cnn = auto_reshape(X_train, 'cnn')
-        X_test_cnn = auto_reshape(X_test, 'cnn')
-        evaluate_model(build_cnn_model(X_train_cnn.shape[1:]), X_train_cnn, X_test_cnn, y_train, y_test, "CNN Model")
-    except ValueError as e:
-        print(f"Skipping CNN evaluation: {e}")
-
-    # Reshape for RNN and LSTM
-    try:
-        X_train_rnn = auto_reshape(X_train, 'rnn')
-        X_test_rnn = auto_reshape(X_test, 'rnn')
+        # Log model with an input example if available
+        if not X_test_original.empty:
+            try:
+                input_example = X_test_original.iloc[:1]
+                mlflow.sklearn.log_model(model, model_name, input_example=input_example)
+            except Exception as e:
+                logging.error(f"Error logging model: {e}")
         
-        evaluate_model(build_rnn_model(X_train_rnn.shape[1:]), X_train_rnn, X_test_rnn, y_train, y_test, "RNN Model")
-        evaluate_model(build_lstm_model(X_train_rnn.shape[1:]), X_train_rnn, X_test_rnn, y_train, y_test, "LSTM Model")
-    except ValueError as e:
-        print(f"Skipping RNN/LSTM evaluation: {e}")
+        logging.info(f"Model: {model_name}\n{report}\nAUC: {auc}")
 
-if __name__ == "__main__":
-    # Set experiment name and create it if it doesn't exist
-    experiment_name = "fraud_detection_experiment"
+# Training traditional ML models on Fraud Data
+for model_name, model in models.items():
+    train_and_evaluate_model(model_name, model, X_train_fraud_scaled, y_train_fraud, X_test_fraud_scaled, y_test_fraud, X_test_fraud)
+
+# Training traditional ML models on Credit Card Data
+for model_name, model in models.items():
+    train_and_evaluate_model(model_name, model, X_train_credit_scaled, y_train_credit, X_test_credit_scaled, y_test_credit, X_test_credit)
+
+# Deep Learning Models: CNN, RNN, and LSTM
+def build_and_train_nn_model(model_type, X_train, y_train, X_test, y_test, input_shape):
+    input_layer = tf.keras.layers.Input(shape=input_shape)
+    if model_type == "CNN":
+        x = tf.keras.layers.Conv1D(64, 3, activation="relu")(input_layer)
+        x = tf.keras.layers.MaxPooling1D(pool_size=2)(x)
+        x = tf.keras.layers.Flatten()(x)
+    elif model_type == "RNN":
+        x = tf.keras.layers.SimpleRNN(64)(input_layer)
+    elif model_type == "LSTM":
+        x = tf.keras.layers.LSTM(64)(input_layer)
+    output_layer = tf.keras.layers.Dense(1, activation='sigmoid')(x)
     
-    # Set the tracking URI for MLflow
-    mlflow.set_tracking_uri("file:./mlruns")  # Ensure this path is writable
-    
-    # Create the experiment if it does not exist
-    try:
-        mlflow.create_experiment(experiment_name)
-    except mlflow.exceptions.MlflowException as e:
-        if "already exists" in str(e):
-            print(f"Experiment '{experiment_name}' already exists. Using the existing experiment.")
-    
-    # Set the current experiment
-    mlflow.set_experiment(experiment_name)
+    model = tf.keras.Model(inputs=input_layer, outputs=output_layer)
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-    # Load data
-    file_paths = (
-        r'C:\Users\hayyu.ragea\AppData\Local\Programs\Python\Python312\ecommerce_fraud_detection_system\Data\processed\fraud_cleaned.csv',
-        r'C:\Users\hayyu.ragea\AppData\Local\Programs\Python\Python312\ecommerce_fraud_detection_system\Data\processed\creditcard_cleaned.csv'
-    )
-    fraud_data, credit_data = load_data(file_paths)
+    with mlflow.start_run(run_name=f"{model_type} Model"):
+        history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=32)
+        
+        # Log model with an input example if available
+        if len(X_test) > 0:
+            try:
+                input_example = X_test[:1]
+                signature = mlflow.models.infer_signature(X_train, model.predict(X_train[:1]))
+                mlflow.keras.log_model(model, model_type, input_example=input_example, signature=signature)
+                mlflow.log_artifacts("classification_report.txt")
+            except Exception as e:
+                logging.error(f"Error logging model: {e}")
 
-    # Prepare and evaluate models for credit card data
-    X_train_cc, X_test_cc, y_train_cc, y_test_cc = prepare_data(credit_data, 'Class')
-    print("Evaluating models for Credit Card Data:")
-    evaluate_models(X_train_cc, X_test_cc, y_train_cc, y_test_cc)
+        for epoch, acc in enumerate(history.history['accuracy']):
+            mlflow.log_metric("train_accuracy", acc, step=epoch)
+        for epoch, val_acc in enumerate(history.history['val_accuracy']):
+            mlflow.log_metric("val_accuracy", val_acc, step=epoch)
 
-    # Prepare and evaluate models for fraud data
-    X_train_fraud, X_test_fraud, y_train_fraud, y_test_fraud = prepare_data(fraud_data, 'class')  # Ensure 'class' is the correct target column
-    print("Evaluating models for Fraud Data:")
-    evaluate_models(X_train_fraud, X_test_fraud, y_train_fraud, y_test_fraud)
+    return model
+
+# Reshape data for deep learning models
+X_train_fraud_reshaped = X_train_fraud_scaled.reshape(-1, X_train_fraud_scaled.shape[1], 1)
+X_test_fraud_reshaped = X_test_fraud_scaled.reshape(-1, X_test_fraud_scaled.shape[1], 1)
+
+X_train_credit_reshaped = X_train_credit_scaled.reshape(-1, X_train_credit_scaled.shape[1], 1)
+X_test_credit_reshaped = X_test_credit_scaled.reshape(-1, X_test_credit_scaled.shape[1], 1)
+
+# Build and Train Deep Learning Models
+cnn_model = build_and_train_nn_model("CNN", X_train_fraud_reshaped, y_train_fraud, X_test_fraud_reshaped, y_test_fraud, (X_train_fraud_reshaped.shape[1], 1))
+rnn_model = build_and_train_nn_model("RNN", X_train_fraud_reshaped, y_train_fraud, X_test_fraud_reshaped, y_test_fraud, (X_train_fraud_reshaped.shape[1], 1))
+lstm_model = build_and_train_nn_model("LSTM", X_train_fraud_reshaped, y_train_fraud, X_test_fraud_reshaped, y_test_fraud, (X_train_fraud_reshaped.shape[1], 1))
+
+# Further evaluation and analysis can follow here
