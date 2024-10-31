@@ -1,82 +1,157 @@
 # Fraud Detection Project
-# Overview
-This project focuses on analyzing and detecting fraudulent transactions in e-commerce and credit card data. The key steps involve data preprocessing, exploratory data analysis (EDA), and developing machine learning models to identify fraud. The objective is to improve transaction security by reducing fraudulent activity through accurate detection models.
 
-# Key Features
-Data Preprocessing: Techniques to clean and prepare data, ensuring reliability and accuracy.
-Exploratory Data Analysis (EDA): Insights into patterns, fraud indicators, and data distributions.
-Machine Learning Models: Use of algorithms like logistic regression, decision trees, and ensemble methods to classify transactions as fraudulent or legitimate.
-Evaluation Metrics: Performance is evaluated using precision, recall, and F1-score, critical for real-world fraud detection.
-Deployment Ready: Integration of tools for real-time fraud detection in production environments.
-# Datasets Used
-Fraud_Data.csv: E-commerce transactions with features such as user_id, signup_time, purchase_time, purchase_value, device_id, and the target variable class (1 for fraudulent, 0 for non-fraudulent).
-IpAddress_to_Country.csv: Maps IP address ranges to countries, adding geographical information to transaction data.
-CreditCard.csv: Credit card transaction data with anonymized features (V1 to V28) and the target variable Class (1 for fraudulent, 0 for non-fraudulent).
-# Key Steps Taken
-1. Data Analysis and Preprocessing
-Handling Missing Values: Imputation and dropping features with over 30% missing values.
-Data Cleaning: Removal of duplicates, correction of data types, and ensuring the integrity of date/time fields.
-Exploratory Data Analysis (EDA): Univariate and bivariate analysis, geolocation insights, and visualization of transaction patterns.
-2. Data Cleaning Process
-Removing Duplicates: Identified redundant entries and removed duplicates to ensure unique transactions.
-Correcting Data Types: Converted numerical strings to appropriate formats and adjusted categorical variables.
-3. Exploratory Data Analysis (EDA) Insights
-Class Imbalance: Non-fraudulent transactions outnumber fraudulent ones.
-Transaction Amounts: Most fraudulent activities involve lower transaction amounts.
-Device and Geolocation Analysis: Specific devices and countries show higher instances of fraud, informing regional risk assessments.
-4. Merging Datasets for Geolocation Analysis
-IP Conversion: Converted IP addresses to integer format and merged datasets for enhanced analysis.
-Geographical Insights: Fraud trends analyzed by country, enhancing detection models.
-5. Feature Engineering
-New Features: Created transaction frequency, velocity, and time-based features like hour_of_day and day_of_week.
-Normalization and Scaling: Applied to features for equitable model training.
-6. Model Building and Training
-Train-Test Split: Utilized train_test_split to create training and test datasets for both fraud and credit card data.
-Models Tested: Algorithms such as logistic regression, decision trees, random forest, gradient boosting, multi-layer perceptron (MLP), and recurrent neural networks (RNN) were used.
-# Interim 2 Submission: Model Building and Training
-# Overview
-This report documents the process of building and training machine learning models to improve fraud detection accuracy. The goal is to reduce financial losses and improve customer trust for Adey Innovations Inc. through the deployment of robust fraud detection systems.
+## Overview
+This project focuses on enhancing fraud detection systems for Adey Innovations Inc. through advanced machine learning techniques, data preprocessing, and visualization.
 
-# Data Preparation
-Feature and Target Separation: Features and target variables were separated for each dataset.
-Train-Test Split: Both e-commerce and credit card datasets were split into training and testing sets.
-Model Selection and Training
-Models Used: Logistic regression, decision trees, random forest, gradient boosting, MLP, RNN, and LSTM.
-Training Process: Models were trained on both datasets, and performance was evaluated using accuracy, precision, recall, and F1-score.
-Evaluation Metrics: Each model was assessed, revealing that random forest and gradient boosting performed well on both datasets.
-MLOps Integration
-MLflow: Versioning and experiment tracking were enabled using MLflow to monitor model performance and parameters across different runs.
-Model Evaluation
-For Credit Card Data
-Top Performers: Random forest, logistic regression, and gradient boosting had the highest accuracy and F1-scores, indicating strong predictive power.
-For Fraud Data
-Top Performers: Random forest and gradient boosting stood out with the highest performance metrics, particularly in handling class imbalance.
-# Conclusion
-The models developed and evaluated for fraud detection in both e-commerce and credit card transactions have shown promising results. Random forest and gradient boosting models performed best, offering significant potential for real-time fraud detection. Ongoing optimization and feature enhancement are recommended to further refine these models.
+## Table of Contents
+1. [Installation](#installation)
+2. [Usage](#usage)
+3. [Task 1: Data Preparation](#task-1-data-preparation)
+4. [Task 2: Model Training](#task-2-model-training)
+5. [Task 3: Model Explainability Report](#task-3-model-explainability-report)
+6. [Task 4: Model Deployment and API Development](#task-4-model-deployment-and-api-development)
+7. [Task 5: Build a Dashboard with Flask and Dash](#task-5-build-a-dashboard-with-flask-and-dash)
+8. [Critical Thinking](#critical-thinking)
+9. [Challenge](#challenge)
+10. [General Conclusion](#general-conclusion)
+11. [GitHub Link](#github-link)
 
-# Installation
-To get started, follow these steps:
+## Installation
+To set up the project locally, follow these steps:
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/HaYyu-Ra/ecommerce_fraud_detection_analysis.git
+   cd ecommerce_fraud_detection_analysis
+
+    Set up a virtual environment (optional but recommended):
+
+    bash
+
+python -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+
+Install the required packages:
 
 bash
-Copy code
-# Clone the repository
-git clone https://github.com/HaYyu-Ra/ecommerce_fraud_detection_analysis.git
-# Navigate to the project directory
-cd ecommerce_fraud_detection_analysis
-# Install dependencies
-pip install -r requirements.txt
+
+    pip install -r requirements.txt
+
 Usage
-Run the main script as detailed in the repository to start the analysis and model training process.
 
-Contributing
-Contributions are welcome! Please fork the repository and submit a pull request with your changes.
+To use the fraud detection system, follow these steps:
 
-License
-This project is licensed under the MIT License. See the LICENSE file for more details.
+    Run the Flask API:
 
-Contact
-For inquiries or suggestions, reach out to [hayyu.ragea@gmail.com].
+    bash
 
-GitHub Link: Fraud Detection Repository
+    python serve_model.py
 
-This project supports Adey Innovations Inc. in improving fraud detection technologies, reducing financial risk, and enhancing customer trust.
+    This will start the Flask application on http://127.0.0.1:5000.
+
+    Access the API endpoints:
+        GET /: Health check endpoint to ensure the API is running.
+        POST /predict: Send a JSON payload to this endpoint to get predictions on potential fraud.
+
+    Access the Dashboard: Open your web browser and go to http://127.0.0.1:8050 to view the interactive dashboard created with Dash.
+
+Task 1: Data Preparation
+
+The initial dataset was processed and cleaned to remove missing values, drop unnecessary features, and convert datetime columns into numeric features. The target variable was defined, and data was split into training and testing sets.
+
+Key Steps:
+
+    Checked for NaN values and dropped columns with more than 50% missing data.
+    Converted datetime features to Unix timestamps.
+    Used target encoding for high-cardinality categorical features.
+    Defined features and target variable, ensuring the feature set was not empty.
+
+Task 2: Model Training
+
+A Random Forest classifier was trained on the processed dataset to predict fraudulent transactions. This model was selected due to its robustness and effectiveness in classification tasks.
+Task 3: Model Explainability Report
+
+Objective: The primary objective of this task was to enhance the explainability of the machine-learning model built for fraud detection by utilizing SHAP (SHapley Additive exPlanations) and LIME (Local Interpretable Model-agnostic Explanations).
+1. Data Preparation:
+
+The dataset was processed and cleaned, and the target variable was defined.
+2. Model Training:
+
+A Random Forest classifier was trained to predict fraudulent transactions.
+3. Using SHAP for Explainability:
+
+SHAP values were calculated to provide insights into the model's feature importance.
+
+Insights from SHAP:
+
+    Summary Plot: Highlights influential features affecting predictions.
+    Force Plot: Visualizes feature contributions for specific predictions.
+    Dependence Plot: Shows the relationship between "purchase_value" and prediction probability.
+
+4. Using LIME for Explainability:
+
+LIME was utilized to explain individual predictions, providing local interpretability.
+
+Insights from LIME:
+
+    Feature Importance Plot: Highlights which features contributed most significantly to specific predictions.
+
+Key Insights and Conclusions:
+
+    Model Trust and Transparency: Increased understanding of predictions.
+    Feature Importance Identification: Features like "purchase_value" and "source" were significant.
+    Improvement Opportunities: Identified areas for further investigation.
+
+Task 4: Model Deployment and API Development
+Results
+
+    Setting Up the Flask API
+        Directory Creation: Created a directory named fraud_detection_api.
+        Flask Application Creation: Developed serve_model.py for the Flask API.
+        Requirements File: Listed necessary dependencies in requirements.txt.
+
+    API Development
+        API Endpoints:
+            GET /: Health check endpoint.
+            POST /predict: Prediction endpoint for incoming data.
+        Testing the API: Verified functionality using Postman.
+
+    Dockerizing the Flask Application
+        Dockerfile Creation: Defined the environment for deploying the Flask application.
+        Building the Docker Image: Built using docker build -t fraud-detection-model ..
+        Running the Docker Container: Launched with docker run -p 5000:5000 fraud-detection-model.
+
+    Integration of Flask Logging
+        Logging Setup: Configured logging for monitoring and debugging.
+
+Task 5: Build a Dashboard with Flask and Dash - Result Report
+Overview
+
+Built an interactive dashboard using Flask as the backend and Dash for visualizations.
+Key Features Implemented
+
+    Flask Endpoint for Fraud Statistics: Created an API endpoint for summary statistics.
+    Dash Frontend: Created interactive visualizations.
+
+Output Results
+
+    Loading and Processing Data: Successfully loaded data.
+    API Endpoint for Fraud Statistics: Returns a JSON object with summary statistics.
+    Dashboard Insights: Provides valuable insights into fraud detection.
+
+Critical Thinking
+
+In tackling the challenge of improving fraud detection, several critical considerations emerged.
+Challenge
+
+Several challenges were encountered throughout the project, particularly with handling imbalanced datasets and technical aspects of model deployment.
+General Conclusion
+
+The project has successfully demonstrated the potential of advanced machine learning techniques combined with robust data pre-processing and feature engineering.
+GitHub Link
+
+Clone the repository to access the project:
+
+bash
+
+git clone https://github.com/HaYyu-Ra/ecommerce_fraud_detection_analysis.git
